@@ -266,9 +266,68 @@ function displayResultsPopup(resultsArray, totalCourses) {
 }
 
 
+// Helper to create or update centered progress UI modal
+function updateProgressUI(current, total, message, isFinished = false) {
+  let overlay = document.getElementById('fetcher-progress-overlay');
+  
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'fetcher-progress-overlay';
+    overlay.style.cssText = `
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(0,0,0,0.65); z-index: 999999;
+      display: flex; justify-content: center; align-items: center;
+      font-family: system-ui, sans-serif;
+    `;
+
+    const modalContent = document.createElement('div');
+    modalContent.id = 'fetcher-progress-content';
+    modalContent.style.cssText = `
+      background: #1e1e1e; color: #fff; padding: 20px; border-radius: 8px;
+      width: 480px; max-width: 90%; display: flex; flex-direction: column;
+      gap: 14px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); font-family: monospace;
+    `;
+    
+    overlay.appendChild(modalContent);
+    document.body.appendChild(overlay);
+  }
+
+  const modalContent = overlay.querySelector('#fetcher-progress-content');
+  const percent = total > 0 ? Math.round((current / total) * 100) : 0;
+
+  modalContent.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;font-size:15px;font-weight:600;">
+      <span>${isFinished ? '✅ Fetch Complete' : '⏳ Fetching Course Data...'}</span>
+      <span style="color:#2196F3;">${percent}%</span>
+    </div>
+    
+    <!-- Progress Bar Track -->
+    <div style="width:100%;background:#111;height:10px;border-radius:5px;overflow:hidden;border:1px solid #333;">
+      <div style="width:${percent}%;background:#2196F3;height:100%;transition:width 0.15s ease;"></div>
+    </div>
+    
+    <!-- Status & Details -->
+    <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#aaa;">
+      <span id="fetcher-log-text" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80%;">
+        ${message}
+      </span>
+      <span>current/{total}</span>
+    </div>
+  `;
+
+  if (isFinished) {
+    setTimeout(() => overlay?.remove(), 800); // Quick fade-out before opening the results modal
+  }
+}
+
 // Main Fetcher Function
 async function fetchAllCourses(courses, year, quarter) {
-  console.log(`Starting fetch for ${courses.length} courses...`);
+  const log = (msg) => {
+    console.log(msg);
+  };
+
+  log(`Starting fetch for ${courses.length} courses...`);
+  updateProgressUI(0, courses.length, `Initializing fetch for ${courses.length} courses...`);
 
   const results = [];
 
@@ -276,17 +335,20 @@ async function fetchAllCourses(courses, year, quarter) {
     const rawCode = courses[i].split(" - ")[0].trim();
     const cleanCode = rawCode.replace(/\s+/g, '').toUpperCase();
 
-    if (!cleanCode) continue;
-
-    if (i % 10 === 0 || i === courses.length - 1) {
-      console.log(`Progress: [i+1/{courses.length}] Processing ${cleanCode}...`);
+    if (!cleanCode) {
+      updateProgressUI(i + 1, courses.length, `Skipping empty code...`);
+      continue;
     }
+
+    const currentNum = i + 1;
+    const progressMsg = `[${currentNum}/${courses.length}] Fetching ${cleanCode}...`;
+    log(progressMsg);
+    updateProgressUI(currentNum, courses.length, progressMsg);
 
     try {
       const response = await fetch(`https://www.oncourse.college/api/course/detail?courseId=${cleanCode}&quarter=${year}-${quarter}&fallbackAny=true`, {
         headers: { "Accept": "application/json" }
       });
-      console.log(`https://www.oncourse.college/api/course/detail?courseId=${cleanCode}&quarter=${year}-${quarter}&fallbackAny=true`)
 
       if (response.ok) {
         const json = await response.json();
@@ -332,9 +394,11 @@ async function fetchAllCourses(courses, year, quarter) {
   // Auto-attempt clipboard copy, then trigger the pop-up modal with the table preview
   try {
     await navigator.clipboard.writeText(results.join("\n"));
-    console.log("SUCCESS! All course data copied to clipboard directly.");
+    log("SUCCESS! All course data copied to clipboard directly.");
+    updateProgressUI(courses.length, courses.length, "Copied results to clipboard!", true);
   } catch (e) {
-    console.warn("Direct clipboard access restricted by browser focus. Clipboard ready via pop-up button.");
+    log("Direct clipboard access restricted by browser focus. Clipboard ready via pop-up button.");
+    updateProgressUI(courses.length, courses.length, "Ready for popup preview...", true);
   }
 
   // Display pop-up helper function
