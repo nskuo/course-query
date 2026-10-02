@@ -1,10 +1,171 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>OnCourse Query</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OnCourse Batch Query Helper</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #121212;
+      color: #e0e0e0;
+      line-height: 1.6;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+    }
+    .wrapper {
+      max-width: 640px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .container {
+      background: #1e1e1e;
+      border: 1px solid #333;
+      border-radius: 12px;
+      padding: 32px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+    h1 { font-size: 24px; color: #fff; margin-bottom: 8px; }
+    h2 { font-size: 16px; color: #fff; margin-top: 24px; }
+    p { color: #aaa; margin-bottom: 16px; font-size: 15px; }
+    a { color: #64b5f6; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    
+    .bookmark-box {
+      background: #282828;
+      border: 2px dashed #444;
+      border-radius: 8px;
+      padding: 20px;
+      text-align: center;
+      margin: 24px 0;
+    }
+    .bookmarklet {
+      display: inline-block;
+      background: #2196F3;
+      color: #fff;
+      font-weight: 600;
+      padding: 10px 20px;
+      border-radius: 6px;
+      text-decoration: none;
+      cursor: grab;
+      user-select: none;
+      box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
+      transition: transform 0.15s, background 0.15s;
+    }
+    .bookmarklet:hover {
+      background: #1e88e5;
+      text-decoration: none;
+      transform: translateY(-1px);
+    }
+    .bookmark-hint {
+      font-size: 13px;
+      color: #888;
+      margin-top: 10px;
+    }
+
+    .steps {
+      list-style: none;
+      counter-reset: step-counter;
+      margin-top: 16px;
+    }
+    .steps li {
+      counter-increment: step-counter;
+      position: relative;
+      padding-left: 36px;
+      margin-bottom: 12px;
+      font-size: 14px;
+      color: #ccc;
+    }
+    .steps li::before {
+      content: counter(step-counter);
+      position: absolute;
+      left: 0;
+      top: 2px;
+      width: 22px;
+      height: 22px;
+      background: #333;
+      color: #2196F3;
+      font-weight: bold;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+    }
+
+    /* ASIDE BOX STYLING */
+    .aside-box {
+      background: #181818;
+      border: 1px solid #2a2a2a;
+      border-left: 4px solid #2196F3;
+      border-radius: 8px;
+      padding: 20px 24px;
+    }
+    .aside-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .aside-box p {
+      font-size: 14px;
+      color: #999;
+      margin-bottom: 10px;
+    }
+    .aside-box p:last-child {
+      margin-bottom: 0;
+    }
+    .aside-box ul {
+      margin: 8px 0 12px 20px;
+      color: #bbb;
+      font-size: 14px;
+    }
+    .aside-box li {
+      margin-bottom: 6px;
+    }
+  </style>
 </head>
 <body>
-    <p>This is js script to run when you open oncourse. You can query a bunch of courses at once if you want to check out what's available for your course requirements. I made it to make things faster so it's messy because it's made quickly.</p>
-    <p>Just bookmark this and click it on oncourse: <a href="javascript:(function(){if(window.queryCourses){window.queryCourses();}else{const s=document.createElement('script');s.src='https://nskuo.github.io/course-query/queryCourses.js';s.onload=()=>window.queryCourses();document.head.appendChild(s);}})();">OnCourse Query Helper</a></p>
+
+  <div class="wrapper">
+    <!-- MAIN CARD -->
+    <div class="container">
+      <h1>OnCourse Query Helper</h1>
+      <p>A quick bookmarklet tool to batch-query multiple courses at once on <a href="https://www.oncourse.college/" target="_blank" rel="noopener">OnCourse</a>.</p>
+
+      <!-- EASY BOOKMARKLET AREA -->
+      <div class="bookmark-box">
+        <a class="bookmarklet" href="javascript:(function(){if(window.queryCourses){window.queryCourses();}else{const s=document.createElement('script');s.src='https://nskuo.github.io/course-query/queryCourses.js';s.onload=()=>window.queryCourses();document.head.appendChild(s);}})();">
+          OnCourse Query
+        </a>
+        <div class="bookmark-hint">Drag this button to your browser's bookmarks bar</div>
+      </div>
+
+      <h2>How to Use It:</h2>
+      <ol class="steps">
+        <li>Drag the button above directly into your browser bookmark bar.</li>
+        <li>Navigate to <a href="https://www.oncourse.college/" target="_blank" rel="noopener">oncourse.college</a>.</li>
+        <li>Click the <strong>OnCourse Query</strong> bookmark from your bar.</li>
+        <li>Paste your list of course codes into the popup to query them all at once.</li>
+      </ol>
+    </div>
+
+    <!-- OUTSIDE ASIDE BOX -->
+    <div class="aside-box">
+      <div class="aside-title">why does this exist?</div>
+      <p>Because I found it tedious to compare courses from long lists of long B.S., M.S., or minor requirements :D</p>
+    </div>
+  </div>
+
 </body>
 </html>
