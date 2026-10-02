@@ -21,7 +21,7 @@ function safeStringify(val) {
 }
 
 
-// Helper: Formats and displays modal with sorting + CSV export
+// Helper Function: Formats and displays modal with sorting + CSV export
 function displayResultsPopup(resultsArray, totalCourses) {
   const existing = document.getElementById("oncourse-overlay");
   if (existing) existing.remove();
@@ -288,9 +288,9 @@ async function fetchAllCourses(courses) {
   displayResultsPopup(results, courses.length);
 }
 
-async function queryCourses() {
-  const modalResult = await new Promise(resolve => {
-    // Remove existing modal if present
+// 1. UI Component (Renders modal, handles UI state, returns a Promise with raw data)
+function showCourseModal() {
+  return new Promise(resolve => {
     const oldModal = document.getElementById('course-input-modal');
     if (oldModal) oldModal.remove();
 
@@ -298,51 +298,63 @@ async function queryCourses() {
     overlay.id = 'course-input-modal';
     overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.65);z-index:999999;display:flex;justify-content:center;align-items:center;font-family:system-ui, sans-serif;';
     
-    overlay.innerHTML = `
-      <div style="background:#1e1e1e;color:#fff;padding:20px;border-radius:8px;width:480px;max-width:90%;display:flex;flex-direction:column;gap:14px;box-shadow:0 8px 24px rgba(0,0,0,0.5);">
-        <label style="font-size:14px;font-weight:600;">Paste Course List:</label>
-        
-        <!-- MODE SELECTOR WITH VISUAL ACTIVE HIGHLIGHT -->
-        <div style="display:flex;gap:8px;background:#111;padding:4px;border-radius:6px;border:1px solid #333;">
-          <label id="lbl-line" style="flex:1;text-align:center;padding:8px 12px;font-size:12px;border-radius:4px;cursor:pointer;background:#2196F3;color:#fff;font-weight:600;transition:all 0.2s;">
-            <input type="radio" name="splitMode" value="line" checked style="display:none;">
-            By Line
-          </label>
-          <label id="lbl-comma" style="flex:1;text-align:center;padding:8px 12px;font-size:12px;border-radius:4px;cursor:pointer;background:transparent;color:#888;font-weight:500;transition:all 0.2s;">
-            <input type="radio" name="splitMode" value="comma" style="display:none;">
-            By Comma
-          </label>
-        </div>
+    // Inject custom styling for placeholder darkness
+    const styleTag = document.createElement('style');
+    styleTag.textContent = `
+      #p-text::placeholder {
+        color: #b0b0b0; /* Darker/brighter contrast on dark background */
+        font-style: italic;
+        opacity: 1;
+      }
+    `;
+    overlay.appendChild(styleTag);
 
-        <textarea id="p-text" rows="8" placeholder="Paste your list here..." style="width:100%;box-sizing:border-box;background:#2d2d2d;color:#fff;border:1px solid #444;border-radius:4px;padding:10px;font-family:monospace;font-size:13px;resize:vertical;"></textarea>
-        
-        <div style="display:flex;justify-content:flex-end;gap:8px;">
-          <button id="p-cancel" style="padding:6px 14px;background:#444;color:#fff;border:none;border-radius:4px;cursor:pointer;">Cancel</button>
-          <button id="p-submit" style="padding:6px 14px;background:#2196F3;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;">Submit</button>
-        </div>
+    const modalContent = document.createElement('div');
+    modalContent.style.cssText = 'background:#1e1e1e;color:#fff;padding:20px;border-radius:8px;width:480px;max-width:90%;display:flex;flex-direction:column;gap:14px;box-shadow:0 8px 24px rgba(0,0,0,0.5);';
+    modalContent.innerHTML = `
+      <label style="font-size:14px;font-weight:600;">Paste Course List:</label>
+      
+      <div style="display:flex;gap:8px;background:#111;padding:4px;border-radius:6px;border:1px solid #333;">
+        <label id="lbl-line" style="flex:1;text-align:center;padding:8px 12px;font-size:12px;border-radius:4px;cursor:pointer;background:#2196F3;color:#fff;font-weight:600;transition:all 0.2s;">
+          <input type="radio" name="splitMode" value="line" checked style="display:none;">
+          By Line
+        </label>
+        <label id="lbl-comma" style="flex:1;text-align:center;padding:8px 12px;font-size:12px;border-radius:4px;cursor:pointer;background:transparent;color:#888;font-weight:500;transition:all 0.2s;">
+          <input type="radio" name="splitMode" value="comma" style="display:none;">
+          By Comma
+        </label>
+      </div>
+
+      <textarea id="p-text" rows="8" style="width:100%;box-sizing:border-box;background:#2d2d2d;color:#fff;border:1px solid #444;border-radius:4px;padding:10px;font-family:monospace;font-size:13px;resize:vertical;"></textarea>
+      
+      <div style="display:flex;justify-content:flex-end;gap:8px;">
+        <button id="p-cancel" style="padding:6px 14px;background:#444;color:#fff;border:none;border-radius:4px;cursor:pointer;">Cancel</button>
+        <button id="p-submit" style="padding:6px 14px;background:#2196F3;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;">Submit</button>
       </div>
     `;
-    
+
+    overlay.appendChild(modalContent);
     document.body.appendChild(overlay);
-    
+
     const area = overlay.querySelector('#p-text');
     const lblLine = overlay.querySelector('#lbl-line');
     const lblComma = overlay.querySelector('#lbl-comma');
     const radios = overlay.querySelectorAll('input[name="splitMode"]');
 
-    // Update active highlight on radio selection
-    radios.forEach(radio => {
-      radio.addEventListener('change', () => {
-        if (radio.value === 'line') {
-          lblLine.style.cssText = 'flex:1;text-align:center;padding:8px 12px;font-size:12px;border-radius:4px;cursor:pointer;background:#2196F3;color:#fff;font-weight:600;transition:all 0.2s;';
-          lblComma.style.cssText = 'flex:1;text-align:center;padding:8px 12px;font-size:12px;border-radius:4px;cursor:pointer;background:transparent;color:#888;font-weight:500;transition:all 0.2s;';
-        } else {
-          lblComma.style.cssText = 'flex:1;text-align:center;padding:8px 12px;font-size:12px;border-radius:4px;cursor:pointer;background:#2196F3;color:#fff;font-weight:600;transition:all 0.2s;';
-          lblLine.style.cssText = 'flex:1;text-align:center;padding:8px 12px;font-size:12px;border-radius:4px;cursor:pointer;background:transparent;color:#888;font-weight:500;transition:all 0.2s;';
-        }
-      });
-    });
+    const placeholders = {
+      line: "CS 205L - Continuous Mathematical Methods with an Emphasis on Machine Learning (3 credits)\nCS 223A\nCS 225A - Experimental Robotics",
+      comma: "CS101, CS102, ARTSTUDI101"
+    };
 
+    const updateUI = (selectedMode) => {
+      const isLine = selectedMode === 'line';
+      lblLine.style.cssText = `flex:1;text-align:center;padding:8px 12px;font-size:12px;border-radius:4px;cursor:pointer;transition:all 0.2s;${isLine ? 'background:#2196F3;color:#fff;font-weight:600;' : 'background:transparent;color:#888;font-weight:500;'}`;
+      lblComma.style.cssText = `flex:1;text-align:center;padding:8px 12px;font-size:12px;border-radius:4px;cursor:pointer;transition:all 0.2s;${!isLine ? 'background:#2196F3;color:#fff;font-weight:600;' : 'background:transparent;color:#888;font-weight:500;'}`;
+      area.placeholder = "Example:\n"+placeholders[selectedMode];
+    };
+
+    radios.forEach(r => r.addEventListener('change', (e) => updateUI(e.target.value)));
+    updateUI('line');
     area.focus();
 
     const close = (val) => { overlay.remove(); resolve(val); };
@@ -351,31 +363,39 @@ async function queryCourses() {
       const mode = overlay.querySelector('input[name="splitMode"]:checked').value;
       close({ text: area.value, mode });
     };
-    
     overlay.querySelector('#p-cancel').onclick = () => close(null);
   });
+}
+
+// 2. Data Parser Pure Function
+function parseCourseList(text, mode) {
+  const delimiter = mode === 'line' ? '\n' : ',';
+  const rawList = text
+    .split(delimiter)
+    .map(item => item.trim())
+    .filter(Boolean);
+
+  return [...new Set(rawList)];
+}
+
+// 3. Orchestrator Function
+async function queryCourses() {
+  const modalResult = await showCourseModal();
 
   if (!modalResult || !modalResult.text.trim()) {
     console.warn("No input provided.");
     return [];
   }
 
-  const { text, mode } = modalResult;
-  const delimiter = mode === 'line' ? '\n' : ',';
-  
-  const rawList = text
-    .split(delimiter)
-    .map(item => item.trim())
-    .filter(Boolean);
-
-  const uniqueCourses = [...new Set(rawList)];
+  const uniqueCourses = parseCourseList(modalResult.text, modalResult.mode);
   window["courseList"] = uniqueCourses;
 
-  console.log(`%c Received uniqueCourses.lengthcourses({mode} mode):`, 'color: #4CAF50; font-weight: bold;');
+  console.log(`%c Received uniqueCourses.lengthcourses({modalResult.mode} mode):`, 'color: #4CAF50; font-weight: bold;');
   console.log(uniqueCourses);
 
   return await fetchAllCourses(uniqueCourses);
 }
+
 
 
 queryCourses();
