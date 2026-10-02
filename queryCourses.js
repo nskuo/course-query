@@ -267,7 +267,7 @@ function displayResultsPopup(resultsArray, totalCourses) {
 
 
 // Main Fetcher Function
-async function fetchAllCourses(courses) {
+async function fetchAllCourses(courses, year, quarter) {
   console.log(`Starting fetch for ${courses.length} courses...`);
 
   const results = [];
@@ -283,9 +283,10 @@ async function fetchAllCourses(courses) {
     }
 
     try {
-      const response = await fetch(`https://www.oncourse.college/api/course/detail?courseId=${cleanCode}&quarter=2026-0&fallbackAny=true`, {
+      const response = await fetch(`https://www.oncourse.college/api/course/detail?courseId=${cleanCode}&quarter=${year}-${quarter}&fallbackAny=true`, {
         headers: { "Accept": "application/json" }
       });
+      console.log(`https://www.oncourse.college/api/course/detail?courseId=${cleanCode}&quarter=${year}-${quarter}&fallbackAny=true`)
 
       if (response.ok) {
         const json = await response.json();
@@ -351,21 +352,73 @@ function showCourseModal() {
     overlay.id = 'course-input-modal';
     overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.65);z-index:999999;display:flex;justify-content:center;align-items:center;font-family:system-ui, sans-serif;';
     
-    // Inject custom styling for placeholder darkness
+    // Inject custom styling for placeholder darkness and selects
     const styleTag = document.createElement('style');
     styleTag.textContent = `
       #p-text::placeholder {
-        color: #b0b0b0; /* Darker/brighter contrast on dark background */
+        color: #b0b0b0;
         font-style: italic;
         opacity: 1;
+      }
+      .modal-select {
+        flex: 1;
+        background: #2d2d2d;
+        color: #fff;
+        border: 1px solid #444;
+        border-radius: 4px;
+        padding: 8px 10px;
+        font-size: 13px;
+        outline: none;
+        cursor: pointer;
+      }
+      .modal-select:focus {
+        border-color: #2196F3;
       }
     `;
     overlay.appendChild(styleTag);
 
+    // Generate School Year Options dynamically (current year up to 10 years ahead)
+    const now = new Date();
+    const realYear = now.getFullYear();
+    const month = now.getMonth(); // 0 = Jan, 8 = Sep, 11 = Dec
+
+    // September (month 8) through December (month 11): use real year
+    // January (month 0) through August (month 7): use real year - 1
+    const currentYear = month >= 8 ? realYear : realYear - 1;
+
+    let yearOptions = '';
+    for (let i = -3; i < 2; i++) {
+      const startYear = currentYear + i;
+      const yrStr = `${startYear}-${startYear + 1}`;
+  
+      // Pre-select when i === 0 (which now represents the current academic year)
+      const isSelected = i === 0 ? 'selected' : '';
+  
+      yearOptions += `<option value="${yrStr}" ${isSelected}>${yrStr}</option>`;
+    }
+
     const modalContent = document.createElement('div');
     modalContent.style.cssText = 'background:#1e1e1e;color:#fff;padding:20px;border-radius:8px;width:480px;max-width:90%;display:flex;flex-direction:column;gap:14px;box-shadow:0 8px 24px rgba(0,0,0,0.5);';
     modalContent.innerHTML = `
-      <label style="font-size:14px;font-weight:600;">Paste Course List:</label>
+      <div style="display:flex;gap:10px;">
+        <div style="flex:1;display:flex;flex-direction:column;gap:4px;">
+          <label style="font-size:12px;color:#aaa;font-weight:600;">School Year</label>
+          <select id="p-year" class="modal-select">
+            ${yearOptions}
+          </select>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:4px;">
+          <label style="font-size:12px;color:#aaa;font-weight:600;">Quarter</label>
+          <select id="p-quarter" class="modal-select">
+            <option value="0" selected>Autumn</option>
+            <option value="1">Winter</option>
+            <option value="2">Spring</option>
+            <option value="3">Summer</option>
+          </select>
+        </div>
+      </div>
+
+      <label style="font-size:14px;font-weight:600;margin-top:4px;">Paste Course List:</label>
       
       <div style="display:flex;gap:8px;background:#111;padding:4px;border-radius:6px;border:1px solid #333;">
         <label id="lbl-line" style="flex:1;text-align:center;padding:8px 12px;font-size:12px;border-radius:4px;cursor:pointer;background:#2196F3;color:#fff;font-weight:600;transition:all 0.2s;">
@@ -412,10 +465,17 @@ function showCourseModal() {
 
     const close = (val) => { overlay.remove(); resolve(val); };
     
-    overlay.querySelector('#p-submit').onclick = () => {
-      const mode = overlay.querySelector('input[name="splitMode"]:checked').value;
-      close({ text: area.value, mode });
-    };
+  overlay.querySelector('#p-submit').onclick = () => {
+    const mode = overlay.querySelector('input[name="splitMode"]:checked').value;
+    const rawYear = overlay.querySelector('#p-year').value; // "2026-2027"
+  
+    // Extract just the first 4-digit year as an integer (or leave off parseInt for a string "2026")
+    const year = parseInt(rawYear.split('-')[0], 10); 
+    const quarter = parseInt(overlay.querySelector('#p-quarter').value, 10);
+
+  close({ text: area.value, mode, year, quarter });
+  };
+
     overlay.querySelector('#p-cancel').onclick = () => close(null);
   });
 }
@@ -443,10 +503,10 @@ async function queryCourses() {
   const uniqueCourses = parseCourseList(modalResult.text, modalResult.mode);
   window["courseList"] = uniqueCourses;
 
-  console.log(`%c Received uniqueCourses.lengthcourses({modalResult.mode} mode):`, 'color: #4CAF50; font-weight: bold;');
+  console.log(`%c Received ${uniqueCourses.lengthcourses}(${modalResult.mode} mode):`, 'color: #4CAF50; font-weight: bold;');
   console.log(uniqueCourses);
 
-  return await fetchAllCourses(uniqueCourses);
+  return await fetchAllCourses(uniqueCourses, modalResult.year, modalResult.quarter);
 }
 
 
