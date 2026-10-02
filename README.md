@@ -1,1 +1,0 @@
-This is js script to run when you open oncourse. You can query a bunch of courses at once if you want to check out what's available for your course requirements. I made it to make things faster so it's messy because it's made quickly.
