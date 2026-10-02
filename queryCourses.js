@@ -36,6 +36,7 @@ function displayResultsPopup(resultsArray, totalCourses) {
     return {
       raw: row,
       code: code,
+      url: `https://www.oncourse.college/${encodeURIComponent(code)}`,
       title: title,
       units: parts[2] || "N/A",
       medianHrs: parts[3] || "N/A",
@@ -152,7 +153,11 @@ function displayResultsPopup(resultsArray, totalCourses) {
     const tbody = document.getElementById("results-tbody");
     tbody.innerHTML = sorted.map(item => `
       <tr style="${item.isError ? 'background-color: #fff0f0; color: #a00;' : 'background-color: #ffffff; color: #222222;'}">
-        <td style="border: 1px solid #ddd; padding: 6px 8px; font-size: 12px; font-weight: bold; color: inherit;">${item.code}</td>
+        <td style="border: 1px solid #ddd; padding: 6px 8px; font-size: 12px; font-weight: bold; color: inherit;">
+          <a href="${item.url}" target="_blank" rel="noopener noreferrer" style="color: #0070f3; text-decoration: underline;">
+            ${item.code}
+          </a>
+        </td>
         <td style="border: 1px solid #ddd; padding: 6px 8px; font-size: 12px; color: inherit;">${item.title}</td>
         <td style="border: 1px solid #ddd; padding: 6px 8px; font-size: 12px; color: inherit;">${item.units}</td>
         <td style="border: 1px solid #ddd; padding: 6px 8px; font-size: 12px; color: inherit;">${item.medianHrs}</td>
@@ -172,14 +177,18 @@ function displayResultsPopup(resultsArray, totalCourses) {
   document.getElementById("term-priority-select").addEventListener("change", renderTable);
   document.getElementById("hrs-sort-select").addEventListener("change", renderTable);
 
-  // CSV Download Handler
+  // CSV Download Handler (with =HYPERLINK formula injection)
   document.getElementById("download-csv-btn").addEventListener("click", () => {
     const csvRows = [headers.join(",")];
     parsedData.forEach(item => {
+      // Excel/Spreadsheet formula for embedded hyperlinks
+      const codeCell = `=HYPERLINK(""item.url"",""{item.code}"")`;
+
       const row = [
-        item.code, item.title, item.units, item.medianHrs, 
+        codeCell, item.title, item.units, item.medianHrs, 
         item.meanHrsStr, item.medianGrade, item.prereqs, item.finalExam, item.terms
       ].map(field => `"${String(field).replace(/"/g, '""')}"`); // Safe CSV escaping
+
       csvRows.push(row.join(","));
     });
 
@@ -192,14 +201,41 @@ function displayResultsPopup(resultsArray, totalCourses) {
     document.body.removeChild(link);
   });
 
-  // Copy Clipboard Handler
+  // Copy Clipboard Handler (Copies both Rich HTML & Plain TSV)
   document.getElementById("copy-btn").addEventListener("click", async () => {
     const tsvData = parsedData.map(d => d.raw).join("\n");
+    
+    // Construct HTML table so Google Sheets / Excel receive hyperlinked text on paste
+    const htmlRows = parsedData.map(d => `
+      <tr>
+        <td><a href="${d.url}">${d.code}</a></td>
+        <td>${d.title}</td>
+        <td>${d.units}</td>
+        <td>${d.medianHrs}</td>
+        <td>${d.meanHrsStr}</td>
+        <td>${d.medianGrade}</td>
+        <td>${d.prereqs}</td>
+        <td>${d.finalExam}</td>
+        <td>${d.terms}</td>
+      </tr>
+    `).join('');
+    const htmlTable = `<table><tbody>${htmlRows}</tbody></table>`;
+
     try {
-      await navigator.clipboard.writeText(tsvData);
-      alert("✅ Copied to clipboard!");
+      const blobText = new Blob([tsvData], { type: 'text/plain' });
+      const blobHtml = new Blob([htmlTable], { type: 'text/html' });
+      
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          'text/plain': blobText,
+          'text/html': blobHtml
+        })
+      ]);
+      alert("✅ Copied data with clickable links to clipboard!");
     } catch (e) {
-      alert("❌ Clipboard access denied.");
+      // Fallback if rich clipboard access fails
+      await navigator.clipboard.writeText(tsvData);
+      alert("✅ Copied plain TSV to clipboard!");
     }
   });
 
@@ -287,6 +323,7 @@ async function fetchAllCourses(courses) {
   // Display pop-up helper function
   displayResultsPopup(results, courses.length);
 }
+
 
 // 1. UI Component (Renders modal, handles UI state, returns a Promise with raw data)
 function showCourseModal() {
