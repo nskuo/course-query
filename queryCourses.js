@@ -67,7 +67,7 @@ function displayResultsPopup(resultsArray, totalCourses) {
 
   container.innerHTML = `
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-      <h3 style="margin: 0; font-size: 18px; color: #111;">Fetch Complete! (parsedData.length/{totalCourses} Processed)</h3>
+      <h3 style="margin: 0; font-size: 18px; color: #111;">Fetch Complete! (${parsedData.length} /${totalCourses} Processed)</h3>
       <button id="close-modal-btn" style="background: none; border: none; font-size: 22px; cursor: pointer; color: #666;">&times;</button>
     </div>
 
@@ -177,17 +177,32 @@ function displayResultsPopup(resultsArray, totalCourses) {
   document.getElementById("term-priority-select").addEventListener("change", renderTable);
   document.getElementById("hrs-sort-select").addEventListener("change", renderTable);
 
-  // CSV Download Handler (with =HYPERLINK formula injection)
+  // CSV Download Handler (Correctly formats =HYPERLINK formula)
   document.getElementById("download-csv-btn").addEventListener("click", () => {
     const csvRows = [headers.join(",")];
+
     parsedData.forEach(item => {
-      // Excel/Spreadsheet formula for embedded hyperlinks
-      const codeCell = `=HYPERLINK(""item.url"",""{item.code}"")`;
+      // Clean string concatenation prevents nested quote escaping bugs
+      const hyperlinkFormula = '=HYPERLINK("' + item.url + '", "' + item.code + '")';
 
       const row = [
-        codeCell, item.title, item.units, item.medianHrs, 
-        item.meanHrsStr, item.medianGrade, item.prereqs, item.finalExam, item.terms
-      ].map(field => `"${String(field).replace(/"/g, '""')}"`); // Safe CSV escaping
+        hyperlinkFormula,
+        item.title,
+        item.units,
+        item.medianHrs, 
+        item.meanHrsStr,
+        item.medianGrade,
+        item.prereqs,
+        item.finalExam,
+        item.terms
+      ].map(field => {
+        const str = String(field);
+        // Formulas starting with '=' must be wrapped in quotes for CSV
+        if (str.startsWith('=')) {
+          return '"' + str.replace(/"/g, '""') + '"';
+        }
+        return '"' + str.replace(/"/g, '""') + '"';
+      });
 
       csvRows.push(row.join(","));
     });
@@ -200,6 +215,7 @@ function displayResultsPopup(resultsArray, totalCourses) {
     link.click();
     document.body.removeChild(link);
   });
+
 
   // Copy Clipboard Handler (Copies both Rich HTML & Plain TSV)
   document.getElementById("copy-btn").addEventListener("click", async () => {
