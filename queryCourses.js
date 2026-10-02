@@ -311,7 +311,7 @@ function updateProgressUI(current, total, message, isFinished = false) {
       <span id="fetcher-log-text" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80%;">
         ${message}
       </span>
-      <span>current/{total}</span>
+      <span>${current} / ${total}</span>
     </div>
   `;
 
@@ -342,7 +342,6 @@ async function fetchAllCourses(courses, year, quarter) {
 
     const currentNum = i + 1;
     const progressMsg = `[${currentNum}/${courses.length}] Fetching ${cleanCode}...`;
-    log(progressMsg);
     updateProgressUI(currentNum, courses.length, progressMsg);
 
     try {
@@ -391,16 +390,7 @@ async function fetchAllCourses(courses, year, quarter) {
     await new Promise(resolve => setTimeout(resolve, 150));
   }
 
-  // Auto-attempt clipboard copy, then trigger the pop-up modal with the table preview
-  try {
-    await navigator.clipboard.writeText(results.join("\n"));
-    log("SUCCESS! All course data copied to clipboard directly.");
-    updateProgressUI(courses.length, courses.length, "Copied results to clipboard!", true);
-  } catch (e) {
-    log("Direct clipboard access restricted by browser focus. Clipboard ready via pop-up button.");
-    updateProgressUI(courses.length, courses.length, "Ready for popup preview...", true);
-  }
-
+  log("SUCCESS! Completed fetching.");
   // Display pop-up helper function
   displayResultsPopup(results, courses.length);
 }
