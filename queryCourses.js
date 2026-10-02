@@ -314,10 +314,10 @@ function updateProgressUI(current, total, message, isFinished = false) {
       <span>${current} / ${total}</span>
     </div>
   `;
-
-  if (isFinished) {
-    setTimeout(() => overlay?.remove(), 800); // Quick fade-out before opening the results modal
+  if (isFinished) {   
+    setTimeout(() => {const existingOverlay = document.getElementById('fetcher-progress-overlay'); if (existingOverlay) { existingOverlay.remove(); }}, 500); // Quick fade-out before opening the results modal
   }
+
 }
 
 // Main Fetcher Function
@@ -334,15 +334,15 @@ async function fetchAllCourses(courses, year, quarter) {
   for (let i = 0; i < courses.length; i++) {
     const rawCode = courses[i].split(" - ")[0].trim();
     const cleanCode = rawCode.replace(/\s+/g, '').toUpperCase();
-
+    const isFinished = i==courses.length-1;
     if (!cleanCode) {
-      updateProgressUI(i + 1, courses.length, `Skipping empty code...`);
+      updateProgressUI(i + 1, courses.length, `Skipping empty code...`, isFinished);
       continue;
     }
 
     const currentNum = i + 1;
-    const progressMsg = `[${currentNum}/${courses.length}] Fetching ${cleanCode}...`;
-    updateProgressUI(currentNum, courses.length, progressMsg);
+    const progressMsg = `Fetching ${cleanCode}...`;
+    updateProgressUI(currentNum, courses.length, progressMsg, isFinished);
 
     try {
       const response = await fetch(`https://www.oncourse.college/api/course/detail?courseId=${cleanCode}&quarter=${year}-${quarter}&fallbackAny=true`, {
